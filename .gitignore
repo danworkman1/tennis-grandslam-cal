@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Wrangler local state & build output
+.wrangler/
+dist/
+worker/
+
+# Local secrets / env (never commit these)
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Claude Code local settings (may contain machine-specific paths / contacts)
+.claude/settings.local.json
+
+# Logs & OS cruft
+*.log
+.DS_Store
+
+docs
