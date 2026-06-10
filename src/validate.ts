@@ -1,12 +1,8 @@
-import { SLAM_KEYS, SLAM_META, type SlamEvent, type SlamKey } from "./seed.js";
+import { SLAM_KEYS, SLAM_META, yearOf, type SlamEvent, type SlamKey } from "./seed.js";
 
 /** Whole days between two ISO dates (endExclusive - start). */
 export function daysBetween(startISO: string, endISO: string): number {
   return Math.round((Date.parse(endISO) - Date.parse(startISO)) / 86_400_000);
-}
-
-function yearOf(iso: string): number {
-  return new Date(iso).getUTCFullYear();
 }
 
 function monthOf(iso: string): number {
@@ -39,7 +35,7 @@ export function isValidEvent(e: SlamEvent): boolean {
  */
 export function validate(events: SlamEvent[], years: number[]): boolean {
   for (const y of years) {
-    const yearEvents = events.filter((e) => yearOf(e.start) === y);
+    const yearEvents = events.filter((e) => yearOf(e) === y);
     const keys = new Set<SlamKey>(yearEvents.map((e) => e.key));
     if (!SLAM_KEYS.every((k) => keys.has(k))) return false;
     for (const e of yearEvents) {

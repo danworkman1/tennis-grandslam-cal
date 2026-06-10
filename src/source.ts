@@ -1,4 +1,4 @@
-import { SLAM_KEYS, SLAM_META, type SlamEvent } from "./seed.js";
+import { pad, SLAM_KEYS, SLAM_META, type SlamEvent } from "./seed.js";
 
 const API = "https://en.wikipedia.org/w/api.php";
 // Wikimedia asks API clients to identify themselves with a contact (repo URL or email).
@@ -11,7 +11,6 @@ const MONTHS: Record<string, number> = {
   oct: 10, nov: 11, dec: 12,
 };
 
-const pad = (n: number) => String(n).padStart(2, "0");
 const isoUTC = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 /**

@@ -19,4 +19,8 @@ worker/
 *.log
 .DS_Store
 
+# hindsight-agent review artifacts
+hindsight-agent-reviews.log
+hindsight-agent-review-cache.json
+
 docs

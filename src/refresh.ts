@@ -1,12 +1,9 @@
 import { buildICS } from "./ics.js";
 import { fetchFromSource } from "./source.js";
-import { SEED, SLAM_KEYS, type SlamEvent } from "./seed.js";
+import { eventId, idOf, SEED, SLAM_KEYS, type SlamEvent } from "./seed.js";
 import { isValidEvent, validate } from "./validate.js";
 
 export type Env = { SLAMS: KVNamespace; ALERT_WEBHOOK?: string; REFRESH_TOKEN?: string };
-
-const yearOf = (e: SlamEvent) => new Date(e.start).getUTCFullYear();
-const idOf = (e: SlamEvent) => `${e.key}-${yearOf(e)}`;
 
 function indexById(events: SlamEvent[]): Map<string, SlamEvent> {
   const m = new Map<string, SlamEvent>();
@@ -33,19 +30,9 @@ export function mergeEvents(
   const out: SlamEvent[] = [];
   for (const year of years) {
     for (const key of SLAM_KEYS) {
-      const id = `${key}-${year}`;
-      const c = cand.get(id);
-      if (c && isValidEvent(c)) {
-        out.push(c);
-        continue;
-      }
-      const g = good.get(id);
-      if (g && isValidEvent(g)) {
-        out.push(g);
-        continue;
-      }
-      const s = seed.get(id);
-      if (s && isValidEvent(s)) out.push(s);
+      const id = eventId(key, year);
+      const pick = [cand.get(id), good.get(id), seed.get(id)].find((e) => e && isValidEvent(e));
+      if (pick) out.push(pick);
     }
   }
   return out;

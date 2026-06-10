@@ -1,4 +1,4 @@
-import type { SlamEvent } from "./seed.js";
+import { idOf, pad, type SlamEvent } from "./seed.js";
 
 /** Minimal KV surface buildICS needs — lets tests inject a fake. */
 export interface SeqStore {
@@ -8,8 +8,6 @@ export interface SeqStore {
 
 const DOMAIN = "tennis-slams-ics.danielworkman.workers.dev";
 const PRODID = "-//dworkman//tennis-slams//EN";
-
-const pad = (n: number) => String(n).padStart(2, "0");
 
 /** "YYYY-MM-DD" -> "YYYYMMDD" for VALUE=DATE fields. */
 export const dateOnly = (iso: string) => iso.replaceAll("-", "");
@@ -57,10 +55,6 @@ async function sha256(s: string): Promise<string> {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function startYear(e: SlamEvent): number {
-  return new Date(e.start).getUTCFullYear();
-}
-
 /**
  * Render the events to an ICS string with CRLF line endings and a trailing
  * CRLF. SEQUENCE for each event is bumped (via the injected store) only when the
@@ -85,8 +79,7 @@ export async function buildICS(
   ];
 
   for (const e of events) {
-    const year = startYear(e);
-    const idBase = `${e.key}-${year}`;
+    const idBase = idOf(e);
     const content = `${e.name}|${e.location}|${e.start}|${e.endExclusive}`;
     const hash = await sha256(content);
     const prevHash = await store.get(`hash:${idBase}`);

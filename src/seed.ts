@@ -8,41 +8,14 @@ export type SlamEvent = {
   endExclusive: string; // "YYYY-MM-DD", day AFTER the final day (ICS DTEND is exclusive)
 };
 
-/**
- * Confirmed 2026 main-draw dates. Bundled so the feed is never empty on a cold
- * start (empty KV) and so every event always has a last-resort fallback value.
- * `endExclusive` is the day after the final day — see ICS rules.
- */
-export const SEED: SlamEvent[] = [
-  {
-    key: "ao",
-    name: "Australian Open",
-    location: "Melbourne Park, Melbourne, Australia",
-    start: "2026-01-18",
-    endExclusive: "2026-02-02",
-  },
-  {
-    key: "rg",
-    name: "French Open (Roland-Garros)",
-    location: "Stade Roland-Garros, Paris, France",
-    start: "2026-05-24",
-    endExclusive: "2026-06-08",
-  },
-  {
-    key: "wimbledon",
-    name: "Wimbledon",
-    location: "All England Lawn Tennis and Croquet Club, London, UK",
-    start: "2026-06-29",
-    endExclusive: "2026-07-13",
-  },
-  {
-    key: "usopen",
-    name: "US Open",
-    location: "Billie Jean King National Tennis Center, New York, USA",
-    start: "2026-08-31",
-    endExclusive: "2026-09-14",
-  },
-];
+export const pad = (n: number) => String(n).padStart(2, "0");
+
+export const yearOf = (e: SlamEvent) => new Date(e.start).getUTCFullYear();
+
+/** The event-identity rule: one (tournament, year) = one calendar event. */
+export const eventId = (key: SlamKey, year: number) => `${key}-${year}`;
+
+export const idOf = (e: SlamEvent) => eventId(e.key, yearOf(e));
 
 export const SLAM_KEYS: SlamKey[] = ["ao", "rg", "wimbledon", "usopen"];
 
@@ -85,3 +58,24 @@ export const SLAM_META: Record<
     expectedStartMonths: [8],
   },
 };
+
+const SEED_DATES: Record<SlamKey, { start: string; endExclusive: string }> = {
+  ao: { start: "2026-01-18", endExclusive: "2026-02-02" },
+  rg: { start: "2026-05-24", endExclusive: "2026-06-08" },
+  wimbledon: { start: "2026-06-29", endExclusive: "2026-07-13" },
+  usopen: { start: "2026-08-31", endExclusive: "2026-09-14" },
+};
+
+/**
+ * Confirmed 2026 main-draw dates. Bundled so the feed is never empty on a cold
+ * start (empty KV) and so every event always has a last-resort fallback value.
+ * `endExclusive` is the day after the final day — see ICS rules. Name/location
+ * come from SLAM_META so the seed can never drift from the refresh-rendered
+ * events (buildICS hashes them for SEQUENCE bumps).
+ */
+export const SEED: SlamEvent[] = SLAM_KEYS.map((key) => ({
+  key,
+  name: SLAM_META[key].name,
+  location: SLAM_META[key].location,
+  ...SEED_DATES[key],
+}));
