@@ -3,7 +3,12 @@ import { fetchFromSource } from "./source.js";
 import { eventId, idOf, SEED, SLAM_KEYS, type SlamEvent } from "./seed.js";
 import { isValidEvent, validate } from "./validate.js";
 
-export type Env = { SLAMS: KVNamespace; ALERT_WEBHOOK?: string; REFRESH_TOKEN?: string };
+export type Env = {
+  SLAMS: KVNamespace;
+  ALERT_WEBHOOK?: string;
+  REFRESH_TOKEN?: string;
+  PUBLIC_ORIGIN?: string;
+};
 
 function indexById(events: SlamEvent[]): Map<string, SlamEvent> {
   const m = new Map<string, SlamEvent>();

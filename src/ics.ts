@@ -6,6 +6,9 @@ export interface SeqStore {
   put(key: string, value: string): Promise<void>;
 }
 
+// This namespace is a permanent event identity, not a serving URL. Keep it
+// stable even if the feed later gains a custom domain, or clients may duplicate
+// every event when their UID changes.
 const DOMAIN = "tennis-slams-ics.danielworkman.workers.dev";
 const PRODID = "-//dworkman//tennis-slams//EN";
 

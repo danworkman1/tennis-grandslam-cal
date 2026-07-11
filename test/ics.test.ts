@@ -73,7 +73,7 @@ describe("buildICS", () => {
 
   it("builds a stable UID from key-startYear", async () => {
     const ics = await buildICS([AO], fakeStore(), FIXED);
-    expect(ics).toContain("UID:ao-2026@");
+    expect(ics).toContain("UID:ao-2026@tennis-slams-ics.danielworkman.workers.dev");
   });
 
   it("escapes commas in LOCATION", async () => {

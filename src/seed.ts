@@ -63,7 +63,7 @@ const SEED_DATES: Record<SlamKey, { start: string; endExclusive: string }> = {
   ao: { start: "2026-01-18", endExclusive: "2026-02-02" },
   rg: { start: "2026-05-24", endExclusive: "2026-06-08" },
   wimbledon: { start: "2026-06-29", endExclusive: "2026-07-13" },
-  usopen: { start: "2026-08-31", endExclusive: "2026-09-14" },
+  usopen: { start: "2026-08-30", endExclusive: "2026-09-14" },
 };
 
 /**

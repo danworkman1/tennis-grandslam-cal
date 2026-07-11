@@ -66,6 +66,41 @@ pnpm dev             # wrangler dev (local). Trigger cron:
 pnpm deploy
 ```
 
+## Adding a custom domain
+
+If this is intended to be a durable public utility, use a dedicated subdomain of
+a domain already managed in Cloudflare (for example, `slams.example.com`). It
+makes the feed easier to trust and remember, and gives you an address that can be
+moved away from Cloudflare later. A custom domain is not an SEO shortcut, so it
+is not worth buying one solely for search ranking.
+
+It can be attached to this same Worker without migrating KV data or resubscribing
+existing users. Keep the `workers.dev` origin enabled and add the new hostname as
+a [Worker Custom Domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/):
+
+```jsonc
+{
+  "workers_dev": true,
+  "vars": { "PUBLIC_ORIGIN": "https://slams.example.com" },
+  "routes": [
+    { "pattern": "slams.example.com", "custom_domain": true }
+  ]
+}
+```
+
+`workers_dev` must remain explicitly `true`: existing calendar apps continue to
+poll the URL they originally saved, and there is no subscriber registry that can
+rewrite it. Keep the legacy `/slams.ics` route returning the feed directly rather
+than relying on calendar clients to migrate through a redirect.
+
+The legacy domain embedded in event `UID` values in `src/ics.ts` is also
+deliberately permanent. It identifies events; it is not a link. Changing it when
+branding the public URL could make clients add duplicate events.
+
+`PUBLIC_ORIGIN` makes metadata and new subscription links use the branded host
+even when somebody visits the legacy homepage. It does not redirect or disable
+the legacy feed.
+
 ### Secrets
 
 ```bash

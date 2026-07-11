@@ -1,11 +1,22 @@
 import { Hono } from "hono";
+import { renderHomePage } from "./home.js";
 import { buildICS } from "./ics.js";
-import { SEED } from "./seed.js";
+import { SEED, type SlamEvent } from "./seed.js";
 import { refresh, type Env } from "./refresh.js";
 
 const app = new Hono<{ Bindings: Env }>();
 
 const REFRESH_INTERVAL_MS = 7 * 86_400_000; // weekly cron
+
+function isServingStale(lastSuccess: string | null, failCount: number): boolean {
+  const lastSuccessMs = lastSuccess ? Date.parse(lastSuccess) : NaN;
+  return (
+    failCount > 0 ||
+    !Number.isFinite(failCount) ||
+    !Number.isFinite(lastSuccessMs) ||
+    Date.now() - lastSuccessMs > 2 * REFRESH_INTERVAL_MS
+  );
+}
 
 app.get("/slams.ics", async (c) => {
   let ics = await c.env.SLAMS.get("feed:ics");
@@ -20,10 +31,7 @@ app.get("/health", async (c) => {
   const lastSuccess = await c.env.SLAMS.get("meta:last_success");
   const failCount = parseInt((await c.env.SLAMS.get("meta:fail_count")) ?? "0", 10);
   const lastErrorRaw = await c.env.SLAMS.get("meta:last_error");
-  const servingStale =
-    failCount > 0 ||
-    !lastSuccess ||
-    Date.now() - Date.parse(lastSuccess) > 2 * REFRESH_INTERVAL_MS;
+  const servingStale = isServingStale(lastSuccess, failCount);
   return c.json({
     last_success: lastSuccess,
     fail_count: failCount,
@@ -42,24 +50,57 @@ app.get("/admin/refresh", async (c) => {
   return c.json({ refreshed: true, fail_count: failCount });
 });
 
-app.get("/", (c) => {
-  const host = c.req.header("host") ?? "tennis-slams-ics.workers.dev";
-  return c.html(`<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tennis Grand Slams calendar</title>
-<style>
-  body{font-family:system-ui,sans-serif;max-width:38rem;margin:4rem auto;padding:0 1rem;line-height:1.5;color:#1a1a1a}
-  code{background:#f2f2f2;padding:.15rem .35rem;border-radius:.25rem;word-break:break-all}
-  a.btn{display:inline-block;margin:.5rem 0 1rem;padding:.6rem 1rem;background:#2e7d32;color:#fff;text-decoration:none;border-radius:.4rem}
-</style></head>
-<body>
-  <h1>🎾 Tennis Grand Slams</h1>
-  <p>A subscribable calendar of the four Grand Slams — Australian Open, Roland-Garros, Wimbledon, and the US Open. Subscribe once; it stays current on its own.</p>
-  <p><a class="btn" href="webcal://${host}/slams.ics">Subscribe</a></p>
-  <p>Or add this URL manually in your calendar app:<br><code>webcal://${host}/slams.ics</code></p>
-  <p style="color:#666;font-size:.9rem"><a href="/health">status</a></p>
-</body></html>`);
+app.get("/", async (c) => {
+  let eventsRaw: string | null = null;
+  let lastSuccess: string | null = null;
+  let failCountRaw: string | null = null;
+  try {
+    [eventsRaw, lastSuccess, failCountRaw] = await Promise.all([
+      c.env.SLAMS.get("feed:events"),
+      c.env.SLAMS.get("meta:last_success"),
+      c.env.SLAMS.get("meta:fail_count"),
+    ]);
+  } catch {
+    // The public page can still render its bundled season if KV is unavailable.
+  }
+
+  let events: SlamEvent[] = SEED;
+  if (eventsRaw) {
+    try {
+      const parsed = JSON.parse(eventsRaw) as SlamEvent[];
+      if (Array.isArray(parsed) && parsed.length > 0) events = parsed;
+    } catch {
+      // A malformed preview must never stop the landing page using bundled dates.
+    }
+  }
+
+  const requestUrl = new URL(c.req.url);
+  const requestOrigin = `${requestUrl.protocol}//${requestUrl.host}`;
+  let publicOrigin = requestOrigin;
+  if (c.env.PUBLIC_ORIGIN) {
+    try {
+      const configuredOrigin = new URL(c.env.PUBLIC_ORIGIN);
+      if (configuredOrigin.protocol === "https:" || configuredOrigin.protocol === "http:") {
+        publicOrigin = configuredOrigin.origin;
+      }
+    } catch {
+      // Ignore a malformed optional origin instead of breaking the homepage.
+    }
+  }
+  const failCount = parseInt(failCountRaw ?? "0", 10);
+  return c.html(
+    renderHomePage(publicOrigin, events, {
+      lastSuccess,
+      failCount,
+      servingStale: isServingStale(lastSuccess, failCount),
+    }),
+    200,
+    {
+      "Cache-Control": "public, max-age=300",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "X-Content-Type-Options": "nosniff",
+    },
+  );
 });
 
 export default {
