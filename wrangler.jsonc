@@ -3,6 +3,10 @@
   "name": "tennis-slams-ics",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-31",
+  "workers_dev": true,
+  "vars": {
+    "PUBLIC_ORIGIN": "https://grandslamcalendar.com"
+  },
   "kv_namespaces": [
     { "binding": "SLAMS", "id": "eef1e5492f02467ab3ebe26291f1a514" }
   ],

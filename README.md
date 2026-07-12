@@ -3,8 +3,11 @@
 A "set and forget" Cloudflare Worker that publishes a subscribable iCalendar feed of
 the four tennis Grand Slams (Australian Open, Roland-Garros, Wimbledon, US Open).
 
-**Subscribe:** `webcal://tennis-slams-ics.danielworkman.workers.dev/slams.ics`
-**Status:** https://tennis-slams-ics.danielworkman.workers.dev/health
+**Subscribe:** `webcal://grandslamcalendar.com/slams.ics`
+**Status:** https://grandslamcalendar.com/health
+
+> The legacy `webcal://tennis-slams-ics.danielworkman.workers.dev/slams.ics` origin
+> stays live for existing subscribers; new metadata and links use the branded host.
 
 ## How it works
 
