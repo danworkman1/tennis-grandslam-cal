@@ -56,6 +56,8 @@ Notes baked into the parser:
 | `GET /slams.ics` | The feed. `text/calendar`, `max-age=3600`. |
 | `GET /health` | `last_success`, `fail_count`, `last_error`, `serving_stale`. |
 | `GET /` | Landing page with the subscribe link. |
+| `GET /robots.txt` | Allows crawling, disallows `/admin/`, points at the sitemap. Replaces Cloudflare's default managed robots.txt. |
+| `GET /sitemap.xml` | Single-URL sitemap for the homepage. URLs use `PUBLIC_ORIGIN`. |
 | `GET /admin/refresh?key=<TOKEN>` | Manually run the refresh (same path as cron). Guarded by the `REFRESH_TOKEN` secret. |
 
 ## Development
