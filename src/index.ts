@@ -1,6 +1,7 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { renderHomePage } from "./home.js";
 import { buildICS } from "./ics.js";
+import { buildRobotsTxt, buildSitemap } from "./seo.js";
 import { SEED, type SlamEvent } from "./seed.js";
 import { refresh, type Env } from "./refresh.js";
 
@@ -16,6 +17,24 @@ function isServingStale(lastSuccess: string | null, failCount: number): boolean 
     !Number.isFinite(lastSuccessMs) ||
     Date.now() - lastSuccessMs > 2 * REFRESH_INTERVAL_MS
   );
+}
+
+// The branded host for public URLs: PUBLIC_ORIGIN when set (so links resolve to the
+// custom domain even from the legacy workers.dev origin), else the request's own host.
+function resolvePublicOrigin(c: Context<{ Bindings: Env }>): string {
+  const requestUrl = new URL(c.req.url);
+  let origin = `${requestUrl.protocol}//${requestUrl.host}`;
+  if (c.env.PUBLIC_ORIGIN) {
+    try {
+      const configured = new URL(c.env.PUBLIC_ORIGIN);
+      if (configured.protocol === "https:" || configured.protocol === "http:") {
+        origin = configured.origin;
+      }
+    } catch {
+      // Ignore a malformed optional origin instead of breaking the response.
+    }
+  }
+  return origin;
 }
 
 app.get("/slams.ics", async (c) => {
@@ -50,6 +69,20 @@ app.get("/admin/refresh", async (c) => {
   return c.json({ refreshed: true, fail_count: failCount });
 });
 
+app.get("/robots.txt", (c) => {
+  return c.body(buildRobotsTxt(resolvePublicOrigin(c)), 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=86400",
+  });
+});
+
+app.get("/sitemap.xml", (c) => {
+  return c.body(buildSitemap(resolvePublicOrigin(c)), 200, {
+    "Content-Type": "application/xml; charset=utf-8",
+    "Cache-Control": "public, max-age=86400",
+  });
+});
+
 app.get("/", async (c) => {
   let eventsRaw: string | null = null;
   let lastSuccess: string | null = null;
@@ -74,22 +107,9 @@ app.get("/", async (c) => {
     }
   }
 
-  const requestUrl = new URL(c.req.url);
-  const requestOrigin = `${requestUrl.protocol}//${requestUrl.host}`;
-  let publicOrigin = requestOrigin;
-  if (c.env.PUBLIC_ORIGIN) {
-    try {
-      const configuredOrigin = new URL(c.env.PUBLIC_ORIGIN);
-      if (configuredOrigin.protocol === "https:" || configuredOrigin.protocol === "http:") {
-        publicOrigin = configuredOrigin.origin;
-      }
-    } catch {
-      // Ignore a malformed optional origin instead of breaking the homepage.
-    }
-  }
   const failCount = parseInt(failCountRaw ?? "0", 10);
   return c.html(
-    renderHomePage(publicOrigin, events, {
+    renderHomePage(resolvePublicOrigin(c), events, {
       lastSuccess,
       failCount,
       servingStale: isServingStale(lastSuccess, failCount),
