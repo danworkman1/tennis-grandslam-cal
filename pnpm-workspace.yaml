@@ -1,4 +1,19 @@
+# Keep the root project explicit. Cloudflare Workers Builds runs a pnpm older
+# than 10.6, which reads this file as a workspace manifest and fails the build
+# with "packages field missing or empty" unless the field is present.
+packages:
+  - "."
+
+# pnpm 10 reads the build-script allowlist from here.
 onlyBuiltDependencies:
   - esbuild
+  - sharp
   - workerd
+
+# pnpm 11 replaces onlyBuiltDependencies with per-package build policies.
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+
 verifyDepsBeforeRun: false
