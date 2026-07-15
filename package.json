@@ -4,17 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "cf-typegen": "wrangler types",
+    "predev": "pnpm cf-typegen",
     "dev": "wrangler dev",
+    "predeploy": "pnpm cf-typegen",
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
+    "pretypecheck": "pnpm cf-typegen",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.12.23"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260530.1",
     "typescript": "^5.9.3",
     "vitest": "^2.1.9",
     "wrangler": "^4.95.0"
