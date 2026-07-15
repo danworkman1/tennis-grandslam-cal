@@ -12,7 +12,8 @@ export function buildFaviconSvg(): string {
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Grand Slam Calendar">',
     '<circle cx="16" cy="16" r="15" fill="#dfff55" stroke="#08271c" stroke-width="2"/>',
     // Two seams, each bowing inward from the rim to carve the classic crescents.
-    // Endpoints sit exactly on the circle: (16±10.6, 16±10.6) is 15 units from centre.
+    // Endpoints sit on the circle at 45°, i.e. 15/sqrt(2) ≈ 10.61 from centre on each
+    // axis; 10.6 rounds that to within 0.01 units, far inside the stroke width.
     // stroke-width 2 is deliberate — at 1.5 the seams turn to mush at the 16px size
     // Google renders favicons at, which is the whole point of this change.
     '<path d="M5.4 5.4A15 15 0 0 1 5.4 26.6" fill="none" stroke="#08271c" stroke-width="2"/>',
