@@ -646,6 +646,9 @@ export function renderHomePage(
     .footer p { max-width: 430px; margin: 0; font-size: 0.76rem; }
     .footer__links { display: flex; flex-wrap: wrap; gap: 1.25rem; justify-content: flex-end; font-size: 0.74rem; font-weight: 700; }
     .footer__links a:hover { color: var(--ball); }
+    .footer .footer__credit { margin-top: 0.9rem; }
+    .footer__credit a { font-weight: 700; }
+    .footer__credit a:hover { color: var(--ball); }
 
     @media (max-width: 960px) {
       .hero__grid { grid-template-columns: 1fr; }
@@ -829,6 +832,7 @@ export function renderHomePage(
       <div>
         <a class="brand" href="/"><span class="brand__ball" aria-hidden="true"></span><span>Grand Slam Calendar</span></a>
         <p>A free public calendar for the four tennis majors. No login, no newsletter, no lurking in the baseline.</p>
+        <p class="footer__credit">Built by <a href="https://danielworkman.dev">Daniel Workman</a></p>
       </div>
       <nav class="footer__links" aria-label="Footer navigation"><a href="${safeHttpsFeedUrl}">Raw .ics feed</a><a href="/health">Feed status</a><a href="#main">Back to top</a></nav>
     </div>

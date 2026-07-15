@@ -82,4 +82,11 @@ describe("renderHomePage", () => {
     expect(html).toContain('class="feed-url"');
     expect(html).toContain("readonly");
   });
+
+  it("credits the author with a followed backlink", () => {
+    const html = renderHomePage("https://calendar.example.com");
+
+    expect(html).toContain('href="https://danielworkman.dev"');
+    expect(html).toContain("Built by");
+  });
 });
