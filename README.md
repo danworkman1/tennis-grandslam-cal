@@ -58,6 +58,7 @@ Notes baked into the parser:
 | `GET /` | Landing page with the subscribe link. |
 | `GET /robots.txt` | Allows crawling, disallows `/admin/`, points at the sitemap. Replaces Cloudflare's default managed robots.txt. |
 | `GET /sitemap.xml` | Single-URL sitemap for the homepage. URLs use `PUBLIC_ORIGIN`. |
+| `GET /favicon.svg` | Site icon (inline SVG, no static assets needed). |
 | `GET /admin/refresh?key=<TOKEN>` | Manually run the refresh (same path as cron). Guarded by the `REFRESH_TOKEN` secret. |
 
 ## Development
