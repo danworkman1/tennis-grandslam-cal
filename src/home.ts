@@ -197,6 +197,7 @@ export function renderHomePage(
   <meta name="theme-color" content="#123c2b">
   <meta name="color-scheme" content="light">
   <link rel="canonical" href="${safeHomepageUrl}">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Every Grand Slam. One living calendar.">
   <meta property="og:description" content="One free subscription for all four tennis majors, kept current as dates change.">

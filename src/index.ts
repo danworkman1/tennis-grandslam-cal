@@ -1,5 +1,6 @@
 import { Hono, type Context } from "hono";
 import { renderHomePage } from "./home.js";
+import { buildFaviconSvg } from "./icon.js";
 import { buildICS } from "./ics.js";
 import { buildRobotsTxt, buildSitemap } from "./seo.js";
 import { SEED, type SlamEvent } from "./seed.js";
@@ -79,6 +80,13 @@ app.get("/robots.txt", (c) => {
 app.get("/sitemap.xml", (c) => {
   return c.body(buildSitemap(resolvePublicOrigin(c)), 200, {
     "Content-Type": "application/xml; charset=utf-8",
+    "Cache-Control": "public, max-age=86400",
+  });
+});
+
+app.get("/favicon.svg", (c) => {
+  return c.body(buildFaviconSvg(), 200, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
     "Cache-Control": "public, max-age=86400",
   });
 });
