@@ -649,6 +649,23 @@ export function renderHomePage(
     .footer .footer__credit { margin-top: 0.9rem; }
     .footer__credit a { font-weight: 700; }
     .footer__credit a:hover { color: var(--ball); }
+    .footer__support { margin-top: 1.15rem; }
+    .bmc-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1.05rem;
+      color: #0d0c22;
+      background: #ffdd00;
+      border: 1px solid #0d0c22;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-decoration: none;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .bmc-button:hover { color: #0d0c22; transform: translateY(-2px); box-shadow: 0 12px 26px rgba(13, 12, 34, 0.35); }
+    .bmc-button svg { width: 16px; height: 16px; }
 
     @media (max-width: 960px) {
       .hero__grid { grid-template-columns: 1fr; }
@@ -833,6 +850,17 @@ export function renderHomePage(
         <a class="brand" href="/"><span class="brand__ball" aria-hidden="true"></span><span>Grand Slam Calendar</span></a>
         <p>A free public calendar for the four tennis majors. No login, no newsletter, no lurking in the baseline.</p>
         <p class="footer__credit">Built by <a href="https://danielworkman.dev">Daniel Workman</a></p>
+        <div class="footer__support">
+          <a class="bmc-button" href="https://buymeacoffee.com/dworkman" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8Z"/>
+              <path d="M16 9h1.75a2.25 2.25 0 0 1 0 4.5H16"/>
+              <path d="M8.5 2.4c-.6.85-.6 1.75 0 2.6"/>
+              <path d="M12.5 2.4c-.6.85-.6 1.75 0 2.6"/>
+            </svg>
+            <span>Buy me a coffee</span>
+          </a>
+        </div>
       </div>
       <nav class="footer__links" aria-label="Footer navigation"><a href="${safeHttpsFeedUrl}">Raw .ics feed</a><a href="/health">Feed status</a><a href="#main">Back to top</a></nav>
     </div>

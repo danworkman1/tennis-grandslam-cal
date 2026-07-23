@@ -89,4 +89,18 @@ describe("renderHomePage", () => {
     expect(html).toContain('href="https://danielworkman.dev"');
     expect(html).toContain("Built by");
   });
+
+  it("offers a Buy Me a Coffee support button in the footer", () => {
+    const html = renderHomePage("https://calendar.example.com");
+
+    expect(html).toContain('href="https://buymeacoffee.com/dworkman"');
+    expect(html).toContain("Buy me a coffee");
+    // Opens in a new tab, safely.
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    // Branded button, no third-party widget script.
+    expect(html).toContain("#ffdd00");
+    expect(html).not.toContain("buymeacoffee.com/widget");
+    expect(html).not.toContain("cdnjs.buymeacoffee.com");
+  });
 });
