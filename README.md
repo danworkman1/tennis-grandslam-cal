@@ -56,6 +56,8 @@ Notes baked into the parser:
 | `GET /slams.ics` | The feed. `text/calendar`, `max-age=3600`. |
 | `GET /health` | `last_success`, `fail_count`, `last_error`, `serving_stale`. |
 | `GET /` | Landing page with the subscribe link. |
+| `GET /blog` | Guide index. Posts live in `src/blog.ts`. |
+| `GET /blog/:slug` | A guide. Unknown slugs fall through to the shared 404. |
 | `GET /robots.txt` | Allows crawling, disallows `/admin/`, points at the sitemap. Replaces Cloudflare's default managed robots.txt. |
 | `GET /sitemap.xml` | Single-URL sitemap for the homepage. URLs use `PUBLIC_ORIGIN`. |
 | `GET /favicon.svg` | Site icon (inline SVG, no static assets needed). |
@@ -124,5 +126,24 @@ src/
   ics.ts      # buildICS, fold, esc, date helpers, SEQUENCE/hash
   validate.ts # isValidEvent + validate
   seed.ts     # SlamEvent type, SEED, SLAM_META
-test/         # ics / validate / source / refresh unit tests
+  layout.ts   # shared page shell: head, stylesheet, nav, footer, 404
+  home.ts     # homepage content
+  blog.ts     # post registry + blog index/post rendering
+  slams.ts    # presentation metadata and date formatting
+  html.ts     # escapeHtml
+test/         # ics / validate / source / refresh / page-rendering unit tests
 ```
+
+### Adding a post
+
+Posts are plain TS objects in the `POSTS` array in `src/blog.ts` — no markdown
+pipeline, no CMS, no build step. Add one and it is automatically routed at
+`/blog/<slug>`, listed on `/blog`, and included in `sitemap.xml` with a `lastmod`
+taken from its `updated ?? published` date.
+
+`body` is a function receiving the resolved feed URLs, so a post can drop the
+subscribe CTA (`renderSubscribeCta`) inline at the point the reader should act.
+Multiple CTAs per page are supported; each is its own `[data-copy-scope]`.
+
+At around five posts this should graduate to markdown pre-rendered at build time.
+`BlogPost` is the seam — change how `body` is produced and nothing else moves.

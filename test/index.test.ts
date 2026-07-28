@@ -32,6 +32,29 @@ describe("X-Robots-Tag on the legacy origin", () => {
     expect(res.headers.get("X-Robots-Tag")).toBeNull();
   });
 
+  // The blog routes and the 404 page arrived after the noindex did, on a branch that
+  // did not have it. They are HTML documents on the duplicate host like any other, so
+  // leaving them out would reopen exactly the duplicate-content hole this closes.
+  it.each([
+    ["the blog index", "/blog"],
+    ["a post", "/blog/add-tennis-grand-slams-to-your-calendar"],
+    ["the 404 page", "/no-such-page"],
+  ])("marks %s noindex on the legacy host", async (_label, path) => {
+    const res = await fetchPath(`${LEGACY}${path}`, makeEnv(BRANDED));
+
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+  });
+
+  it.each([
+    ["the blog index", "/blog"],
+    ["a post", "/blog/add-tennis-grand-slams-to-your-calendar"],
+    ["the 404 page", "/no-such-page"],
+  ])("leaves %s indexable on the branded host", async (_label, path) => {
+    const res = await fetchPath(`${BRANDED}${path}`, makeEnv(BRANDED));
+
+    expect(res.headers.get("X-Robots-Tag")).toBeNull();
+  });
+
   it("does not mark anything noindex when PUBLIC_ORIGIN is unset", async () => {
     // Without a configured brand there is no canonical host to prefer, so the
     // request's own host is canonical by definition.

@@ -1,5 +1,5 @@
 import { escapeHtml } from "./html.js";
-import { renderPage } from "./layout.js";
+import { COPY_SCRIPT, renderPage } from "./layout.js";
 import { SEED, type SlamEvent } from "./seed.js";
 import { dateRange, seasonEvents, SLAM_DETAILS } from "./slams.js";
 
@@ -65,32 +65,6 @@ function statusCopy(status: HomeStatus): { label: string; className: string } {
   return { label: "Protected season dates active", className: "status--neutral" };
 }
 
-const COPY_SCRIPT = `  <script>
-    (() => {
-      const button = document.querySelector(".copy-button");
-      const status = document.querySelector(".copy-status");
-      const field = document.querySelector(".feed-url");
-      if (!(button instanceof HTMLButtonElement) || !(status instanceof HTMLElement) || !(field instanceof HTMLInputElement)) return;
-
-      field.addEventListener("focus", () => field.select());
-      field.addEventListener("click", () => field.select());
-
-      button.addEventListener("click", async () => {
-        const url = button.dataset.copyUrl;
-        if (!url) return;
-        try {
-          await navigator.clipboard.writeText(url);
-          button.querySelector("span").textContent = "Copied";
-          status.textContent = "Calendar URL copied. Paste it into your calendar app.";
-          window.setTimeout(() => { button.querySelector("span").textContent = "Copy URL"; }, 2200);
-        } catch {
-          status.textContent = "Copy was blocked. Select the URL above and copy it manually.";
-          field.focus();
-          field.select();
-        }
-      });
-    })();
-  </script>`;
 
 export function renderHomePage(
   origin: string,
@@ -204,7 +178,7 @@ export function renderHomePage(
           <h2 id="subscribe-title">Your season, one URL.</h2>
           <p>Copy this address when your calendar asks for a subscription or “calendar from URL.” It stays the same as dates update.</p>
         </div>
-        <div class="subscribe-panel__tools">
+        <div class="subscribe-panel__tools" data-copy-scope>
           <div class="feed-field">
             <input class="feed-url" type="url" value="${safeHttpsFeedUrl}" aria-label="Calendar subscription URL" readonly>
             <button class="copy-button" type="button" data-copy-url="${safeHttpsFeedUrl}">

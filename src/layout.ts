@@ -1,3 +1,5 @@
+import { escapeHtml } from "./html.js";
+
 // The chrome every page on the site shares: the document shell, the head, the
 // stylesheet and the footer. Page modules supply only their own <head> values and
 // their own body content.
@@ -67,6 +69,132 @@ export function renderFooter(feedUrl: string): string {
     </div>
   </footer>`;
 }
+
+/**
+ * The 404. Previously Hono's built-in `text/plain` "404 Not Found" — 13 bytes with
+ * no Cache-Control, which is functional but a dead end on a site trying to acquire
+ * organic traffic. This one keeps the reader on the site.
+ */
+export function renderNotFoundPage(origin: string): string {
+  const baseUrl = origin.replace(/\/+$/, "");
+  const feedUrl = escapeHtml(`${baseUrl}/slams.ics`);
+  const canonicalUrl = escapeHtml(`${baseUrl}/404`);
+
+  return renderPage({
+    head: {
+      title: "Page not found — Grand Slam Calendar",
+      description: "That page does not exist. The calendar feed is still where it always was.",
+      canonicalUrl,
+      ogTitle: "Page not found — Grand Slam Calendar",
+      ogDescription: "That page does not exist.",
+      structuredData: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: "Page not found",
+      }),
+    },
+    feedUrl,
+    content: `  <header class="page-head">
+${renderSiteNav()}
+    <div class="page-head__inner shell">
+      <h1>That page does not exist.</h1>
+      <p class="page-head__lede">The calendar feed is still exactly where it was. Nothing you subscribed to has moved.</p>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section shell">
+      <div class="prose">
+        <p><a href="/">Back to the calendar</a> · <a href="/blog">Guides</a> · <a href="/health">Feed status</a></p>
+      </div>
+    </section>
+  </main>`,
+  });
+}
+
+/**
+ * Nav for pages that are not the homepage. The homepage's own nav lives inside
+ * `<header class="hero">` and carries live feed status; a content page has no
+ * status to report, so it gets the brand and a route back to the subscribe CTA.
+ */
+export function renderSiteNav(): string {
+  return `    <nav class="nav shell" aria-label="Primary navigation">
+      <a class="brand" href="/" aria-label="Grand Slam Calendar home">
+        <span class="brand__ball" aria-hidden="true"></span>
+        <span>Grand Slam Calendar</span>
+      </a>
+      <a class="nav__status" href="/#subscribe">Subscribe</a>
+    </nav>`;
+}
+
+/**
+ * The copyable subscribe block, for pages that need the CTA inline rather than
+ * in the homepage's subscribe panel.
+ *
+ * Both URLs are rendered: the `https://` one as visible text, because `webcal://`
+ * is not a crawlable scheme and a webcal-only CTA makes the page's primary action
+ * invisible to crawlers — and silently no-ops in desktop browsers with no
+ * registered handler.
+ */
+export function renderSubscribeCta(opts: {
+  httpsFeedUrl: string;
+  webcalFeedUrl: string;
+  heading: string;
+  blurb: string;
+}): string {
+  return `      <div class="post-cta" data-copy-scope>
+        <h2>${opts.heading}</h2>
+        <p>${opts.blurb}</p>
+        <div class="feed-field">
+          <input class="feed-url" type="url" value="${opts.httpsFeedUrl}" aria-label="Calendar subscription URL" readonly>
+          <button class="copy-button" type="button" data-copy-url="${opts.httpsFeedUrl}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <span>Copy URL</span>
+          </button>
+        </div>
+        <p class="copy-status" role="status" aria-live="polite">Use the HTTPS address for manual setup.</p>
+      </div>`;
+}
+
+/**
+ * Clipboard wiring for every copy button on the page.
+ *
+ * Deliberately `querySelectorAll` and scoped per block: the original bound a
+ * single `.copy-button` via `querySelector`, so any page carrying both a top and
+ * a bottom CTA would have shipped a dead second button. `[data-copy-scope]` keeps
+ * each button talking to its own status line and field.
+ */
+export const COPY_SCRIPT = `  <script>
+    (() => {
+      const buttons = document.querySelectorAll(".copy-button");
+      buttons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        const scope = button.closest("[data-copy-scope]") ?? document;
+        const status = scope.querySelector(".copy-status");
+        const field = scope.querySelector(".feed-url");
+        if (!(status instanceof HTMLElement) || !(field instanceof HTMLInputElement)) return;
+
+        field.addEventListener("focus", () => field.select());
+        field.addEventListener("click", () => field.select());
+
+        button.addEventListener("click", async () => {
+          const url = button.dataset.copyUrl;
+          if (!url) return;
+          const label = button.querySelector("span");
+          try {
+            await navigator.clipboard.writeText(url);
+            if (label) label.textContent = "Copied";
+            status.textContent = "Calendar URL copied. Paste it into your calendar app.";
+            window.setTimeout(() => { if (label) label.textContent = "Copy URL"; }, 2200);
+          } catch {
+            status.textContent = "Copy was blocked. Select the URL above and copy it manually.";
+            field.focus();
+            field.select();
+          }
+        });
+      });
+    })();
+  </script>`;
 
 export function renderPage({ head, content, feedUrl, scripts }: PageOptions): string {
   // A page with no scripts collapses to a single blank line before </body> rather
@@ -586,6 +714,110 @@ ${renderHead(head)}
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+
+    /* Chrome for pages that are not the homepage. The nav above lives inside
+       .hero, which is homepage-only (760px tall, full-bleed gradient), and bare
+       h1 is a hero headline clamped to 10ch — an article title would inherit it
+       and render visibly broken. Everything below is the second page type's own. */
+    .page-head {
+      color: var(--white);
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-deep) 100%);
+    }
+    .page-head__inner { padding-block: 0 clamp(2.5rem, 6vw, 4rem); }
+    .page-head .nav { border-bottom-color: rgba(255, 253, 246, 0.18); }
+    .page-head h1 {
+      max-width: 22ch;
+      margin: clamp(2rem, 5vw, 3rem) 0 0;
+      font-size: clamp(2.35rem, 5.5vw, 3.6rem);
+      letter-spacing: -0.04em;
+      line-height: 1.02;
+    }
+    .page-head__lede {
+      max-width: 62ch;
+      margin: 1.25rem 0 0;
+      color: rgba(255, 253, 246, 0.76);
+      font-size: clamp(1rem, 2vw, 1.12rem);
+      line-height: 1.7;
+    }
+    .page-head__meta {
+      margin: 1.5rem 0 0;
+      color: rgba(255, 253, 246, 0.6);
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+    }
+
+    .prose { max-width: 68ch; margin-inline: auto; font-size: 1.05rem; }
+    .prose > * + * { margin-top: 1.35rem; }
+    .prose h2 {
+      margin-top: 3rem;
+      font-family: var(--serif);
+      font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    .prose h3 { margin-top: 2.25rem; font-size: 1.15rem; }
+    .prose a { color: var(--green); text-underline-offset: 3px; }
+    .prose a:hover { color: var(--green-deep); }
+    .prose ul, .prose ol { padding-left: 1.25rem; }
+    .prose li + li { margin-top: 0.55rem; }
+    .prose code {
+      padding: 0.15em 0.4em;
+      background: var(--green-soft);
+      border-radius: 5px;
+      font-size: 0.92em;
+      word-break: break-all;
+    }
+    .prose pre {
+      padding: 1rem 1.15rem;
+      overflow-x: auto;
+      background: var(--green-deep);
+      border-radius: 12px;
+      color: var(--white);
+    }
+    .prose pre code { padding: 0; background: none; color: inherit; word-break: normal; }
+    .prose blockquote {
+      margin-inline: 0;
+      padding-left: 1.15rem;
+      border-left: 3px solid var(--ball);
+      color: var(--muted);
+    }
+    .prose hr { margin-block: 2.5rem; border: 0; border-top: 1px solid var(--line); }
+    .prose img { max-width: 100%; height: auto; border-radius: 12px; }
+
+    .post-cta {
+      max-width: 68ch;
+      margin: 2.5rem auto;
+      padding: clamp(1.4rem, 3vw, 2rem);
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+    .post-cta h2 { margin: 0 0 0.5rem; font-family: var(--serif); font-weight: 500; }
+    .post-cta p { margin: 0 0 1.15rem; color: var(--muted); }
+
+    .post-list { max-width: 68ch; margin-inline: auto; padding: 0; list-style: none; }
+    .post-list li + li { margin-top: 1rem; }
+    .post-list a {
+      display: block;
+      padding: 1.35rem 1.5rem;
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      text-decoration: none;
+      transition: border-color 160ms ease, transform 160ms ease;
+    }
+    .post-list a:hover { border-color: var(--green); transform: translateY(-2px); }
+    .post-list h2 { margin: 0 0 0.35rem; font-size: 1.2rem; }
+    .post-list p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .post-list time { display: block; margin-top: 0.6rem; color: var(--muted); font-size: 0.78rem; }
+
+    @media (max-width: 720px) {
+      .prose { font-size: 1rem; }
+      .prose h2 { margin-top: 2.4rem; }
+      .post-cta { border-radius: 16px; }
     }
   </style>
 </head>
