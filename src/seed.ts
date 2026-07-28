@@ -59,23 +59,53 @@ export const SLAM_META: Record<
   },
 };
 
-const SEED_DATES: Record<SlamKey, { start: string; endExclusive: string }> = {
-  ao: { start: "2026-01-18", endExclusive: "2026-02-02" },
-  rg: { start: "2026-05-24", endExclusive: "2026-06-08" },
-  wimbledon: { start: "2026-06-29", endExclusive: "2026-07-13" },
-  usopen: { start: "2026-08-30", endExclusive: "2026-09-14" },
+type DateRange = { start: string; endExclusive: string };
+
+/**
+ * Main-draw dates per year. The outer key is organisational only — an event's
+ * year is always derived from `start` via `yearOf`, so these never disagree.
+ *
+ * The seed must always cover the refresh window, which is `[thisYear, thisYear+1]`
+ * (`refresh.ts`). A seed that has expired is not a harmless stale constant: with no
+ * year-specific Wikipedia article yet published, no last-known-good in KV and no
+ * seed, `mergeEvents` returns nothing for the year, the hard gate throws, and the
+ * feed silently keeps serving the previous season's dates. That is the one failure
+ * mode a set-and-forget calendar cannot have, so this table needs a year added well
+ * before each January.
+ */
+const SEED_DATES: Record<number, Record<SlamKey, DateRange>> = {
+  // Confirmed.
+  2026: {
+    ao: { start: "2026-01-18", endExclusive: "2026-02-02" },
+    rg: { start: "2026-05-24", endExclusive: "2026-06-08" },
+    wimbledon: { start: "2026-06-29", endExclusive: "2026-07-13" },
+    usopen: { start: "2026-08-30", endExclusive: "2026-09-14" },
+  },
+  // UNVERIFIED — must be checked against each tournament's own published calendar
+  // before this is relied on. Only Wimbledon (28 Jun – 11 Jul 2027) has a reported
+  // source; the other three follow 2026's weekday pattern and are inference, not
+  // announcement. Beware that published ranges often quote qualifying or opening
+  // week alongside the main draw: `start` is the first MAIN-DRAW day.
+  2027: {
+    ao: { start: "2027-01-17", endExclusive: "2027-02-01" },
+    rg: { start: "2027-05-23", endExclusive: "2027-06-07" },
+    wimbledon: { start: "2027-06-28", endExclusive: "2027-07-12" },
+    usopen: { start: "2027-08-29", endExclusive: "2027-09-13" },
+  },
 };
 
 /**
- * Confirmed 2026 main-draw dates. Bundled so the feed is never empty on a cold
- * start (empty KV) and so every event always has a last-resort fallback value.
- * `endExclusive` is the day after the final day — see ICS rules. Name/location
- * come from SLAM_META so the seed can never drift from the refresh-rendered
- * events (buildICS hashes them for SEQUENCE bumps).
+ * Bundled main-draw dates, so the feed is never empty on a cold start (empty KV)
+ * and every event always has a last-resort fallback value. `endExclusive` is the
+ * day after the final day — see ICS rules. Name/location come from SLAM_META so the
+ * seed can never drift from the refresh-rendered events (buildICS hashes them for
+ * SEQUENCE bumps).
  */
-export const SEED: SlamEvent[] = SLAM_KEYS.map((key) => ({
-  key,
-  name: SLAM_META[key].name,
-  location: SLAM_META[key].location,
-  ...SEED_DATES[key],
-}));
+export const SEED: SlamEvent[] = Object.values(SEED_DATES).flatMap((byKey) =>
+  SLAM_KEYS.map((key) => ({
+    key,
+    name: SLAM_META[key].name,
+    location: SLAM_META[key].location,
+    ...byKey[key],
+  })),
+);
