@@ -20,22 +20,41 @@ function isServingStale(lastSuccess: string | null, failCount: number): boolean 
   );
 }
 
+// The configured branded origin, or null when PUBLIC_ORIGIN is unset or malformed.
+// Split out from resolvePublicOrigin so callers can tell "nothing configured" apart
+// from "configured, and it happens to match this request".
+function configuredOrigin(env: Env): URL | null {
+  if (!env.PUBLIC_ORIGIN) return null;
+  try {
+    const configured = new URL(env.PUBLIC_ORIGIN);
+    if (configured.protocol !== "https:" && configured.protocol !== "http:") return null;
+    return configured;
+  } catch {
+    // Ignore a malformed optional origin instead of breaking the response.
+    return null;
+  }
+}
+
 // The branded host for public URLs: PUBLIC_ORIGIN when set (so links resolve to the
 // custom domain even from the legacy workers.dev origin), else the request's own host.
 function resolvePublicOrigin(c: Context<{ Bindings: Env }>): string {
   const requestUrl = new URL(c.req.url);
-  let origin = `${requestUrl.protocol}//${requestUrl.host}`;
-  if (c.env.PUBLIC_ORIGIN) {
-    try {
-      const configured = new URL(c.env.PUBLIC_ORIGIN);
-      if (configured.protocol === "https:" || configured.protocol === "http:") {
-        origin = configured.origin;
-      }
-    } catch {
-      // Ignore a malformed optional origin instead of breaking the response.
-    }
-  }
-  return origin;
+  return configuredOrigin(c.env)?.origin ?? `${requestUrl.protocol}//${requestUrl.host}`;
+}
+
+/**
+ * True when the request arrived on a host other than the branded one — in practice
+ * the legacy workers.dev origin.
+ *
+ * That host serves byte-identical HTML, so the same page exists on two URLs. The
+ * duplicate cannot be removed: `workers_dev` must stay enabled because existing
+ * calendar apps poll the URL they originally saved and there is no subscriber
+ * registry that can rewrite it (see README). The canonical tag already points at the
+ * branded host, but canonical is a hint, not a directive — this is the directive.
+ */
+function isNonCanonicalHost(c: Context<{ Bindings: Env }>): boolean {
+  const configured = configuredOrigin(c.env);
+  return configured !== null && new URL(c.req.url).host !== configured.host;
 }
 
 app.get("/slams.ics", async (c) => {
@@ -127,6 +146,9 @@ app.get("/", async (c) => {
       "Cache-Control": "public, max-age=300",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Content-Type-Options": "nosniff",
+      // HTML only. The feed and /health must stay indexable-agnostic: /slams.ics is
+      // what subscribers poll on the legacy host and noindex there would be noise.
+      ...(isNonCanonicalHost(c) ? { "X-Robots-Tag": "noindex" } : {}),
     },
   );
 });
