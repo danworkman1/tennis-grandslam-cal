@@ -89,6 +89,25 @@ describe("renderHomePage", () => {
     expect(html).toContain("2026 Grand Slam season");
   });
 
+  it("keeps its head metadata pointed at its own canonical URL", () => {
+    // Previously untested, and the reason the layout extraction is risky without
+    // it: a page reusing the shared head would silently emit the wrong canonical.
+    const html = renderHomePage("https://grandslamcalendar.com");
+
+    expect(html).toContain('<link rel="canonical" href="https://grandslamcalendar.com/">');
+    expect(html).toContain('<meta property="og:url" content="https://grandslamcalendar.com/">');
+    expect(html).toContain(
+      "<title>2026 Grand Slam dates — all four tennis majors in one calendar</title>",
+    );
+  });
+
+  it("describes itself as a WebApplication in JSON-LD", () => {
+    const html = renderHomePage("https://grandslamcalendar.com");
+
+    expect(html).toContain('"@type":"WebApplication"');
+    expect(html).toContain('"url":"https://grandslamcalendar.com/"');
+  });
+
   it("shows the upcoming season, not one that has already finished", () => {
     // 1 Dec 2026: the whole 2026 season is over and 2027 is known. Before this
     // fix the page kept showing 2026 until the calendar rolled over on 1 January.
