@@ -2,6 +2,8 @@ import { Hono, type Context } from "hono";
 import { renderHomePage } from "./home.js";
 import { buildFaviconSvg } from "./icon.js";
 import { buildICS } from "./ics.js";
+import { findPost, renderBlogIndex, renderBlogPost, sortedPosts } from "./blog.js";
+import { renderNotFoundPage } from "./layout.js";
 import { buildRobotsTxt, buildSitemap } from "./seo.js";
 import { SEED, type SlamEvent } from "./seed.js";
 import { refresh, type Env } from "./refresh.js";
@@ -36,6 +38,20 @@ function resolvePublicOrigin(c: Context<{ Bindings: Env }>): string {
     }
   }
   return origin;
+}
+
+/**
+ * Security headers shared by every HTML response.
+ *
+ * Takes the context so this stays the one place HTML-only headers are decided —
+ * the legacy-origin `X-Robots-Tag: noindex` belongs here too once that lands, and
+ * it must cover the blog routes, not just the homepage.
+ */
+function sharedHtmlHeaders(_c: Context<{ Bindings: Env }>): Record<string, string> {
+  return {
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+  };
 }
 
 app.get("/slams.ics", async (c) => {
@@ -78,7 +94,17 @@ app.get("/robots.txt", (c) => {
 });
 
 app.get("/sitemap.xml", (c) => {
-  return c.body(buildSitemap(resolvePublicOrigin(c)), 200, {
+  // Every indexable HTML URL. Posts carry a hand-edited lastmod; the homepage and
+  // the blog index deliberately do not — see SitemapEntry.
+  const entries = [
+    { path: "/" },
+    { path: "/blog" },
+    ...sortedPosts().map((post) => ({
+      path: `/blog/${post.slug}`,
+      lastmod: post.updated ?? post.published,
+    })),
+  ];
+  return c.body(buildSitemap(resolvePublicOrigin(c), entries), 200, {
     "Content-Type": "application/xml; charset=utf-8",
     "Cache-Control": "public, max-age=86400",
   });
@@ -88,6 +114,26 @@ app.get("/favicon.svg", (c) => {
   return c.body(buildFaviconSvg(), 200, {
     "Content-Type": "image/svg+xml; charset=utf-8",
     "Cache-Control": "public, max-age=86400",
+  });
+});
+
+// "/blog/" matches neither route below, so it would otherwise 404 on a trailing
+// slash a reader is quite likely to type.
+app.get("/blog/", (c) => c.redirect("/blog", 301));
+
+app.get("/blog", (c) => {
+  return c.html(renderBlogIndex(resolvePublicOrigin(c)), 200, {
+    "Cache-Control": "public, max-age=900",
+    ...sharedHtmlHeaders(c),
+  });
+});
+
+app.get("/blog/:slug", (c) => {
+  const post = findPost(c.req.param("slug"));
+  if (!post) return c.notFound(); // delegates to the app-level handler below
+  return c.html(renderBlogPost(resolvePublicOrigin(c), post), 200, {
+    "Cache-Control": "public, max-age=3600",
+    ...sharedHtmlHeaders(c),
   });
 });
 
@@ -125,10 +171,19 @@ app.get("/", async (c) => {
     200,
     {
       "Cache-Control": "public, max-age=300",
-      "Referrer-Policy": "strict-origin-when-cross-origin",
-      "X-Content-Type-Options": "nosniff",
+      ...sharedHtmlHeaders(c),
     },
   );
+});
+
+// One app-level handler covers unknown paths and unknown post slugs alike.
+// max-age is short on purpose: a URL that later becomes a real post must not stay
+// cached as missing.
+app.notFound((c) => {
+  return c.html(renderNotFoundPage(resolvePublicOrigin(c)), 404, {
+    "Cache-Control": "public, max-age=300",
+    ...sharedHtmlHeaders(c),
+  });
 });
 
 export default {
