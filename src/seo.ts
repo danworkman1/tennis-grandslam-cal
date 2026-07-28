@@ -22,16 +22,40 @@ export function buildRobotsTxt(origin: string): string {
   ].join("\n");
 }
 
-export function buildSitemap(origin: string): string {
+export type SitemapEntry = {
+  /** Root-relative, leading slash included: "/", "/blog", "/blog/some-post". */
+  path: string;
+  /**
+   * "YYYY-MM-DD", hand-edited when the page's content actually changes.
+   *
+   * Deliberately omitted for the homepage. The two automatic sources both lie:
+   * `meta:last_success` is written on every successful cron with no content
+   * comparison, so it would bump ~52 times a year on a page that never changed,
+   * and a build-time constant bumps on deploys that touch only the refresh path
+   * and change no rendered byte. Google only uses lastmod when it is consistently
+   * accurate, so a wrong one is worse than none.
+   */
+  lastmod?: string;
+};
+
+export function buildSitemap(
+  origin: string,
+  entries: SitemapEntry[] = [{ path: "/" }],
+): string {
   const base = escapeXml(origin.replace(/\/+$/, ""));
-  // A single-page site: the homepage is the only indexable URL. The feed
-  // (/slams.ics) and /health are not HTML documents and are intentionally omitted.
+  // The feed (/slams.ics) and /health are not HTML documents and are intentionally
+  // omitted; /admin/ is disallowed in robots.txt.
+  const urls = entries
+    .map(({ path, lastmod }) => {
+      const loc = `${base}${escapeXml(path.startsWith("/") ? path : `/${path}`)}`;
+      const lastmodLine = lastmod ? `\n    <lastmod>${escapeXml(lastmod)}</lastmod>` : "";
+      return `  <url>\n    <loc>${loc}</loc>${lastmodLine}\n  </url>`;
+    })
+    .join("\n");
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${base}/</loc>
-    <changefreq>weekly</changefreq>
-  </url>
+${urls}
 </urlset>
 `;
 }
