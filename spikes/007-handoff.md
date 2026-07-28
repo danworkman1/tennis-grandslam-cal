@@ -1,5 +1,29 @@
 # Handoff — finish spike 007 from a session with internet access
 
+> ## ✅ Completed — kept as a record, do not re-run
+>
+> Executed on 28 July 2026 from a session with network access. Outcomes:
+>
+> - **Task 1 — done.** All four 2027 dates confirmed against the official 2027 ATP
+>   Tour calendar, the AO also against ausopen.com. **No value changed.** The US
+>   Open was the one genuinely at risk: 29 Aug is right, and the wrong 30 Aug that
+>   several aggregators publish would have passed validation silently.
+> - **Task 2 — done, issue #8 closed.** Four VEVENTs, not eight, as predicted.
+>   `serving_stale: false`, `fail_count: 0`. It also turned up a live defect the
+>   spike had not predicted — see the US Open note in #8.
+> - **Task 3 — issue #10.** Search Console and analytics are dashboard work that
+>   needs the account owner; the repo-side conclusions are recorded on the issue.
+> - **Task 4 — done, issue #16 closed.** The launch post went through the
+>   `daniel-voice` skill.
+> - **Merge order — followed.** All six PRs merged. One correction to the note
+>   below: #23 did **not** auto-retarget when #21 merged. Deleting #21's branch
+>   *closed* #23 outright, and it had to be reopened and repointed at `main` by
+>   hand. The warning was right, the mechanism was not.
+>
+> The rest of this file is the original brief, unchanged.
+
+---
+
 Paste this whole file (or point at it in the repo) into a session that has outbound
 network access. Everything here was blocked in the authoring session because egress
 to `en.wikipedia.org`, the tournament sites and `grandslamcalendar.com` returned
