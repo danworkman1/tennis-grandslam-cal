@@ -76,6 +76,25 @@ describe("renderHomePage", () => {
     expect(html).toContain("2026 Grand Slam season");
   });
 
+  it("keeps its head metadata pointed at its own canonical URL", () => {
+    // Previously untested, and the reason the layout extraction is risky without
+    // it: a page reusing the shared head would silently emit the wrong canonical.
+    const html = renderHomePage("https://grandslamcalendar.com");
+
+    expect(html).toContain('<link rel="canonical" href="https://grandslamcalendar.com/">');
+    expect(html).toContain('<meta property="og:url" content="https://grandslamcalendar.com/">');
+    expect(html).toContain(
+      "<title>Grand Slam Calendar — all four tennis majors, one subscription</title>",
+    );
+  });
+
+  it("describes itself as a WebApplication in JSON-LD", () => {
+    const html = renderHomePage("https://grandslamcalendar.com");
+
+    expect(html).toContain('"@type":"WebApplication"');
+    expect(html).toContain('"url":"https://grandslamcalendar.com/"');
+  });
+
   it("provides a keyboard-selectable manual feed URL", () => {
     const html = renderHomePage("https://calendar.example.com");
 
