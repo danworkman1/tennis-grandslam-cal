@@ -81,11 +81,13 @@ const SEED_DATES: Record<number, Record<SlamKey, DateRange>> = {
     wimbledon: { start: "2026-06-29", endExclusive: "2026-07-13" },
     usopen: { start: "2026-08-30", endExclusive: "2026-09-14" },
   },
-  // UNVERIFIED — must be checked against each tournament's own published calendar
-  // before this is relied on. Only Wimbledon (28 Jun – 11 Jul 2027) has a reported
-  // source; the other three follow 2026's weekday pattern and are inference, not
-  // announcement. Beware that published ranges often quote qualifying or opening
-  // week alongside the main draw: `start` is the first MAIN-DRAW day.
+  // Confirmed against the official 2027 ATP Tour calendar (week-commencing dates,
+  // rev. 14 Jan 2026) and, for the AO, ausopen.com's own dates announcement.
+  // `start` is the first MAIN-DRAW day, which is NOT what most sites quote: the AO
+  // runs an Opening Week (11-16 Jan 2027) of qualifying and exhibitions before the
+  // main draw, and several date aggregators still apply the pre-2025 Monday start to
+  // the US Open and so wrongly report 30 Aug. The ATP calendar has it in week 35,
+  // commencing Sunday 29 Aug — the 15-day format the US Open has used since 2025.
   2027: {
     ao: { start: "2027-01-17", endExclusive: "2027-02-01" },
     rg: { start: "2027-05-23", endExclusive: "2027-06-07" },
