@@ -14,6 +14,18 @@ const TWO_SEASONS: SlamEvent[] = [
   { key: "usopen", start: "2027-08-29", endExclusive: "2027-09-13" },
 ].map((e) => ({ ...e, name: e.key, location: "somewhere" }) as SlamEvent);
 
+/**
+ * A fixed point inside the 2026 season, for the tests that assert a specific
+ * season's content or metadata.
+ *
+ * These would otherwise read the wall clock, and the bundled seed now covers two
+ * years: once the 2026 US Open ends, the default page legitimately switches to
+ * 2027 and every hardcoded "2026" assertion starts failing on a date rather than
+ * on a change. Season *selection* is tested explicitly further down, with its own
+ * `now` values — that behaviour is not what these two are for.
+ */
+const DURING_2026 = new Date("2026-07-01T00:00:00Z");
+
 describe("renderHomePage", () => {
   it("uses the active origin for subscribe and copy URLs", () => {
     const html = renderHomePage("https://calendar.example.com");
@@ -23,7 +35,7 @@ describe("renderHomePage", () => {
   });
 
   it("explains the calendar and includes every Grand Slam", () => {
-    const html = renderHomePage("https://calendar.example.com");
+    const html = renderHomePage("https://calendar.example.com", undefined, undefined, DURING_2026);
 
     expect(html).toContain("Australian Open");
     expect(html).toContain("Roland-Garros");
@@ -71,6 +83,17 @@ describe("renderHomePage", () => {
     expect(html).toContain("US Open");
   });
 
+  it("shows exactly one season when it falls back to the bundled dates", () => {
+    // The seed spans more than one year. Handing it back whole rendered every
+    // bundled season at once, on the cold-start path the seed is there to serve.
+    const html = renderHomePage("https://calendar.example.com", [], undefined, DURING_2026);
+
+    expect(html.match(/class="season-row /g)).toHaveLength(4);
+    expect(html.match(/class="slam-card /g)).toHaveLength(4);
+    expect(html).toContain("2026 Grand Slam season");
+    expect(html).not.toContain("2027 Grand Slam season");
+  });
+
   it("rejects a preview that repeats one major four times", () => {
     const duplicate = {
       key: "ao" as const,
@@ -79,12 +102,12 @@ describe("renderHomePage", () => {
       start: "2027-01-18",
       endExclusive: "2027-02-02",
     };
-    const html = renderHomePage("https://calendar.example.com", [
-      duplicate,
-      duplicate,
-      duplicate,
-      duplicate,
-    ]);
+    const html = renderHomePage(
+      "https://calendar.example.com",
+      [duplicate, duplicate, duplicate, duplicate],
+      undefined,
+      DURING_2026,
+    );
 
     expect(html).toContain("2026 Grand Slam season");
   });
@@ -92,7 +115,7 @@ describe("renderHomePage", () => {
   it("keeps its head metadata pointed at its own canonical URL", () => {
     // Previously untested, and the reason the layout extraction is risky without
     // it: a page reusing the shared head would silently emit the wrong canonical.
-    const html = renderHomePage("https://grandslamcalendar.com");
+    const html = renderHomePage("https://grandslamcalendar.com", undefined, undefined, DURING_2026);
 
     expect(html).toContain('<link rel="canonical" href="https://grandslamcalendar.com/">');
     expect(html).toContain('<meta property="og:url" content="https://grandslamcalendar.com/">');

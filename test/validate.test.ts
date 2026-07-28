@@ -2,7 +2,10 @@ import { describe, it, expect } from "vitest";
 import { validate, isValidEvent } from "../src/validate.js";
 import { SEED, type SlamEvent } from "../src/seed.js";
 
-const GOOD: SlamEvent[] = SEED; // all four, 2026
+const GOOD: SlamEvent[] = SEED; // all four tournaments, for every seeded year
+
+/** A year the seed deliberately does not cover, so "absent year" stays testable. */
+const UNSEEDED_YEAR = 2028;
 
 describe("validate (set)", () => {
   it("accepts a complete, sane year", () => {
@@ -13,8 +16,13 @@ describe("validate (set)", () => {
     expect(validate(GOOD.filter((e) => e.key !== "usopen"), [2026])).toBe(false);
   });
 
+  it("accepts the seeded year that follows the current one", () => {
+    // The seed must always cover refresh()'s [thisYear, thisYear+1] window.
+    expect(validate(GOOD, [2026, 2027])).toBe(true);
+  });
+
   it("rejects when a required future year is absent", () => {
-    expect(validate(GOOD, [2026, 2027])).toBe(false); // no 2027 events present
+    expect(validate(GOOD, [2026, UNSEEDED_YEAR])).toBe(false);
   });
 });
 
