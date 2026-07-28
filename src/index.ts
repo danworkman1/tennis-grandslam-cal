@@ -2,6 +2,8 @@ import { Hono, type Context } from "hono";
 import { renderHomePage } from "./home.js";
 import { buildFaviconSvg } from "./icon.js";
 import { buildICS } from "./ics.js";
+import { findPost, renderBlogIndex, renderBlogPost, sortedPosts } from "./blog.js";
+import { renderNotFoundPage } from "./layout.js";
 import { buildRobotsTxt, buildSitemap } from "./seo.js";
 import { SEED, type SlamEvent } from "./seed.js";
 import { refresh, type Env } from "./refresh.js";
@@ -20,22 +22,58 @@ function isServingStale(lastSuccess: string | null, failCount: number): boolean 
   );
 }
 
+// The configured branded origin, or null when PUBLIC_ORIGIN is unset or malformed.
+// Split out from resolvePublicOrigin so callers can tell "nothing configured" apart
+// from "configured, and it happens to match this request".
+function configuredOrigin(env: Env): URL | null {
+  if (!env.PUBLIC_ORIGIN) return null;
+  try {
+    const configured = new URL(env.PUBLIC_ORIGIN);
+    if (configured.protocol !== "https:" && configured.protocol !== "http:") return null;
+    return configured;
+  } catch {
+    // Ignore a malformed optional origin instead of breaking the response.
+    return null;
+  }
+}
+
 // The branded host for public URLs: PUBLIC_ORIGIN when set (so links resolve to the
 // custom domain even from the legacy workers.dev origin), else the request's own host.
 function resolvePublicOrigin(c: Context<{ Bindings: Env }>): string {
   const requestUrl = new URL(c.req.url);
-  let origin = `${requestUrl.protocol}//${requestUrl.host}`;
-  if (c.env.PUBLIC_ORIGIN) {
-    try {
-      const configured = new URL(c.env.PUBLIC_ORIGIN);
-      if (configured.protocol === "https:" || configured.protocol === "http:") {
-        origin = configured.origin;
-      }
-    } catch {
-      // Ignore a malformed optional origin instead of breaking the response.
-    }
-  }
-  return origin;
+  return configuredOrigin(c.env)?.origin ?? `${requestUrl.protocol}//${requestUrl.host}`;
+}
+
+/**
+ * True when the request arrived on a host other than the branded one — in practice
+ * the legacy workers.dev origin.
+ *
+ * That host serves byte-identical HTML, so the same page exists on two URLs. The
+ * duplicate cannot be removed: `workers_dev` must stay enabled because existing
+ * calendar apps poll the URL they originally saved and there is no subscriber
+ * registry that can rewrite it (see README). The canonical tag already points at the
+ * branded host, but canonical is a hint, not a directive — this is the directive.
+ */
+function isNonCanonicalHost(c: Context<{ Bindings: Env }>): boolean {
+  const configured = configuredOrigin(c.env);
+  return configured !== null && new URL(c.req.url).host !== configured.host;
+}
+
+/**
+ * Security headers shared by every HTML response.
+ *
+ * Takes the context so this stays the one place HTML-only headers are decided —
+ * the legacy-origin `X-Robots-Tag: noindex` belongs here too once that lands, and
+ * it must cover the blog routes, not just the homepage.
+ */
+function sharedHtmlHeaders(c: Context<{ Bindings: Env }>): Record<string, string> {
+  return {
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    // HTML only. The feed and /health must stay indexable-agnostic: /slams.ics is
+    // what subscribers poll on the legacy host and noindex there would be noise.
+    ...(isNonCanonicalHost(c) ? { "X-Robots-Tag": "noindex" } : {}),
+  };
 }
 
 app.get("/slams.ics", async (c) => {
@@ -78,7 +116,17 @@ app.get("/robots.txt", (c) => {
 });
 
 app.get("/sitemap.xml", (c) => {
-  return c.body(buildSitemap(resolvePublicOrigin(c)), 200, {
+  // Every indexable HTML URL. Posts carry a hand-edited lastmod; the homepage and
+  // the blog index deliberately do not — see SitemapEntry.
+  const entries = [
+    { path: "/" },
+    { path: "/blog" },
+    ...sortedPosts().map((post) => ({
+      path: `/blog/${post.slug}`,
+      lastmod: post.updated ?? post.published,
+    })),
+  ];
+  return c.body(buildSitemap(resolvePublicOrigin(c), entries), 200, {
     "Content-Type": "application/xml; charset=utf-8",
     "Cache-Control": "public, max-age=86400",
   });
@@ -88,6 +136,26 @@ app.get("/favicon.svg", (c) => {
   return c.body(buildFaviconSvg(), 200, {
     "Content-Type": "image/svg+xml; charset=utf-8",
     "Cache-Control": "public, max-age=86400",
+  });
+});
+
+// "/blog/" matches neither route below, so it would otherwise 404 on a trailing
+// slash a reader is quite likely to type.
+app.get("/blog/", (c) => c.redirect("/blog", 301));
+
+app.get("/blog", (c) => {
+  return c.html(renderBlogIndex(resolvePublicOrigin(c)), 200, {
+    "Cache-Control": "public, max-age=900",
+    ...sharedHtmlHeaders(c),
+  });
+});
+
+app.get("/blog/:slug", (c) => {
+  const post = findPost(c.req.param("slug"));
+  if (!post) return c.notFound(); // delegates to the app-level handler below
+  return c.html(renderBlogPost(resolvePublicOrigin(c), post), 200, {
+    "Cache-Control": "public, max-age=3600",
+    ...sharedHtmlHeaders(c),
   });
 });
 
@@ -125,10 +193,19 @@ app.get("/", async (c) => {
     200,
     {
       "Cache-Control": "public, max-age=300",
-      "Referrer-Policy": "strict-origin-when-cross-origin",
-      "X-Content-Type-Options": "nosniff",
+      ...sharedHtmlHeaders(c),
     },
   );
+});
+
+// One app-level handler covers unknown paths and unknown post slugs alike.
+// max-age is short on purpose: a URL that later becomes a real post must not stay
+// cached as missing.
+app.notFound((c) => {
+  return c.html(renderNotFoundPage(resolvePublicOrigin(c)), 404, {
+    "Cache-Control": "public, max-age=300",
+    ...sharedHtmlHeaders(c),
+  });
 });
 
 export default {
