@@ -96,11 +96,26 @@ function isDisplayableEvent(value: unknown): value is SlamEvent {
   );
 }
 
-function seasonEvents(events: SlamEvent[]): SlamEvent[] {
+/**
+ * The season to put on the page: the upcoming one, not simply the earliest on file.
+ *
+ * This used to key off the earliest year present, which was fine while the feed only
+ * ever held one season. It stops being fine the moment next year's dates arrive: the
+ * homepage would keep showing a season that had already finished until the calendar
+ * rolled over on 1 January. A season stays "upcoming" until its last event ends.
+ *
+ * If every event is in the past — a stale feed — the most recent season is still
+ * better than an empty page, and the completeness check below backstops the rest.
+ */
+function seasonEvents(events: SlamEvent[], now: Date = new Date()): SlamEvent[] {
   const usable = (events as unknown[]).filter(isDisplayableEvent);
   const sorted = [...usable].sort((a, b) => a.start.localeCompare(b.start));
-  const firstYear = sorted[0]?.start.slice(0, 4);
-  const season = sorted.filter((event) => event.start.startsWith(`${firstYear}-`)).slice(0, 4);
+
+  const today = now.toISOString().slice(0, 10);
+  const stillToCome = sorted.filter((event) => event.endExclusive > today);
+  const targetYear = (stillToCome[0] ?? sorted[sorted.length - 1])?.start.slice(0, 4);
+
+  const season = sorted.filter((event) => event.start.startsWith(`${targetYear}-`)).slice(0, 4);
   const hasEverySlam = new Set(season.map((event) => event.key)).size === 4;
   return season.length === 4 && hasEverySlam ? season : SEED;
 }
@@ -165,6 +180,7 @@ export function renderHomePage(
   origin: string,
   events: SlamEvent[] = SEED,
   status: HomeStatus = { lastSuccess: null, failCount: 0, servingStale: true },
+  now: Date = new Date(),
 ): string {
   const baseUrl = origin.replace(/\/+$/, "");
   const httpsFeedUrl = `${baseUrl}/slams.ics`;
@@ -173,7 +189,7 @@ export function renderHomePage(
   const safeHttpsFeedUrl = escapeHtml(httpsFeedUrl);
   const safeWebcalFeedUrl = escapeHtml(webcalFeedUrl);
   const safeHomepageUrl = escapeHtml(homepageUrl);
-  const currentSeason = seasonEvents(events);
+  const currentSeason = seasonEvents(events, now);
   const seasonYear = currentSeason[0]?.start.slice(0, 4) ?? "2026";
   const feedStatus = statusCopy(status);
   const structuredData = JSON.stringify({
@@ -192,14 +208,14 @@ export function renderHomePage(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Grand Slam Calendar — all four tennis majors, one subscription</title>
-  <meta name="description" content="Add the Australian Open, Roland-Garros, Wimbledon and US Open to your calendar with one free, automatically updated subscription.">
+  <title>${escapeHtml(seasonYear)} Grand Slam dates — all four tennis majors in one calendar</title>
+  <meta name="description" content="The ${escapeHtml(seasonYear)} Australian Open, Roland-Garros, Wimbledon and US Open dates, as one free calendar subscription that keeps itself up to date. No account needed.">
   <meta name="theme-color" content="#123c2b">
   <meta name="color-scheme" content="light">
   <link rel="canonical" href="${safeHomepageUrl}">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Every Grand Slam. One living calendar.">
+  <meta property="og:title" content="${escapeHtml(seasonYear)} Grand Slam dates. One living calendar.">
   <meta property="og:description" content="One free subscription for all four tennis majors, kept current as dates change.">
   <meta property="og:url" content="${safeHomepageUrl}">
   <meta name="twitter:card" content="summary">
@@ -733,7 +749,7 @@ export function renderHomePage(
     <div class="hero__grid shell">
       <div class="hero__copy">
         <p class="eyebrow">The majors, without the admin</p>
-        <h1>Every Grand Slam. <em>One calendar.</em></h1>
+        <h1>${escapeHtml(seasonYear)} Grand Slam dates. <em>One calendar.</em></h1>
         <p class="hero__lede">Subscribe once to the Australian Open, Roland-Garros, Wimbledon and the US Open. The dates live in your calendar—and keep up when the season moves.</p>
         <div class="hero__actions">
           <a class="button button--primary" href="${safeWebcalFeedUrl}">
