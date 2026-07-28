@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mergeEvents } from "../src/refresh.js";
-import { SEED, type SlamEvent } from "../src/seed.js";
+import { SEED, SLAM_KEYS, type SlamEvent, type SlamKey } from "../src/seed.js";
 import { validate } from "../src/validate.js";
 
 const wikiAO: SlamEvent = {
@@ -23,12 +23,48 @@ describe("mergeEvents", () => {
     expect(merged.map((e) => e.key).sort()).toEqual(["ao", "rg", "usopen", "wimbledon"]);
   });
 
-  it("prefers last-known-good over seed when no candidate", () => {
+  it("lets the seed correct a stale last-known-good for a year it covers", () => {
+    // This asserted the opposite until the live feed proved why it could not stay
+    // that way: KV held a 2026 US Open starting 31 August against a true main-draw
+    // start of Sunday 30 August, and because the year-specific article had been
+    // redirected away that (key, year) could never produce a candidate again. The
+    // wrong value was unreachable by any successful refresh.
     const known: SlamEvent[] = [
-      { ...SEED.find((e) => e.key === "usopen")!, start: "2026-08-25", endExclusive: "2026-09-08" },
+      { ...SEED.find((e) => e.key === "usopen")!, start: "2026-08-31", endExclusive: "2026-09-14" },
     ];
     const merged = mergeEvents([], known, [2026]);
-    expect(merged.find((e) => e.key === "usopen")!.start).toBe("2026-08-25");
+    expect(merged.find((e) => e.key === "usopen")!.start).toBe("2026-08-30");
+  });
+
+  it("still prefers last-known-good where the seed has nothing to say", () => {
+    // The other half of the rule, and the reason known-good exists at all: it
+    // carries years beyond the seed's range.
+    const ranges2028: Record<SlamKey, [string, string]> = {
+      ao: ["2028-01-16", "2028-01-31"],
+      rg: ["2028-05-21", "2028-06-05"],
+      wimbledon: ["2028-06-26", "2028-07-10"],
+      usopen: ["2028-08-27", "2028-09-11"],
+    };
+    const known: SlamEvent[] = SLAM_KEYS.map((key) => ({
+      ...SEED.find((e) => e.key === key)!,
+      start: ranges2028[key][0],
+      endExclusive: ranges2028[key][1],
+    }));
+    const merged = mergeEvents([], known, [2028]);
+    expect(merged).toHaveLength(4);
+    expect(merged.find((e) => e.key === "usopen")!.start).toBe("2028-08-27");
+  });
+
+  it("still lets a fresh candidate outrank the seed", () => {
+    // The seed gaining precedence over known-good must not make it outrank live
+    // data — a genuine date change still has to win.
+    const moved: SlamEvent = {
+      ...SEED.find((e) => e.key === "usopen")!,
+      start: "2026-08-24",
+      endExclusive: "2026-09-07",
+    };
+    const merged = mergeEvents([moved], [], [2026]);
+    expect(merged.find((e) => e.key === "usopen")!.start).toBe("2026-08-24");
   });
 
   it("never lets an invalid candidate overwrite good data", () => {
