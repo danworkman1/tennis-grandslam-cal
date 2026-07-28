@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { renderHomePage } from "../src/home.js";
+import type { SlamEvent } from "../src/seed.js";
+
+/** Two complete seasons on file, which is what the feed holds mid-year. */
+const TWO_SEASONS: SlamEvent[] = [
+  { key: "ao", start: "2026-01-18", endExclusive: "2026-02-02" },
+  { key: "rg", start: "2026-05-24", endExclusive: "2026-06-08" },
+  { key: "wimbledon", start: "2026-06-29", endExclusive: "2026-07-13" },
+  { key: "usopen", start: "2026-08-30", endExclusive: "2026-09-14" },
+  { key: "ao", start: "2027-01-17", endExclusive: "2027-02-01" },
+  { key: "rg", start: "2027-05-23", endExclusive: "2027-06-07" },
+  { key: "wimbledon", start: "2027-06-28", endExclusive: "2027-07-12" },
+  { key: "usopen", start: "2027-08-29", endExclusive: "2027-09-13" },
+].map((e) => ({ ...e, name: e.key, location: "somewhere" }) as SlamEvent);
 
 describe("renderHomePage", () => {
   it("uses the active origin for subscribe and copy URLs", () => {
@@ -84,7 +97,7 @@ describe("renderHomePage", () => {
     expect(html).toContain('<link rel="canonical" href="https://grandslamcalendar.com/">');
     expect(html).toContain('<meta property="og:url" content="https://grandslamcalendar.com/">');
     expect(html).toContain(
-      "<title>Grand Slam Calendar — all four tennis majors, one subscription</title>",
+      "<title>2026 Grand Slam dates — all four tennis majors in one calendar</title>",
     );
   });
 
@@ -93,6 +106,69 @@ describe("renderHomePage", () => {
 
     expect(html).toContain('"@type":"WebApplication"');
     expect(html).toContain('"url":"https://grandslamcalendar.com/"');
+  });
+
+  it("shows the upcoming season, not one that has already finished", () => {
+    // 1 Dec 2026: the whole 2026 season is over and 2027 is known. Before this
+    // fix the page kept showing 2026 until the calendar rolled over on 1 January.
+    const html = renderHomePage(
+      "https://calendar.example.com",
+      TWO_SEASONS,
+      undefined,
+      new Date("2026-12-01T00:00:00Z"),
+    );
+
+    expect(html).toContain("2027 Grand Slam season");
+    expect(html).not.toContain("2026 Grand Slam season");
+  });
+
+  it("keeps showing the current season while one of its majors is still to come", () => {
+    // 28 Jul 2026: Wimbledon is done but the US Open has not started, so 2026 is
+    // still the upcoming season even though 2027 dates are on file.
+    const html = renderHomePage(
+      "https://calendar.example.com",
+      TWO_SEASONS,
+      undefined,
+      new Date("2026-07-28T00:00:00Z"),
+    );
+
+    expect(html).toContain("2026 Grand Slam season");
+  });
+
+  it("falls back to the most recent season when every date is in the past", () => {
+    const html = renderHomePage(
+      "https://calendar.example.com",
+      TWO_SEASONS,
+      undefined,
+      new Date("2030-01-01T00:00:00Z"),
+    );
+
+    expect(html).toContain("2027 Grand Slam season");
+  });
+
+  it("leads with the year and the word dates in its search metadata", () => {
+    const html = renderHomePage(
+      "https://calendar.example.com",
+      TWO_SEASONS,
+      undefined,
+      new Date("2026-07-28T00:00:00Z"),
+    );
+
+    expect(html).toContain("<title>2026 Grand Slam dates —");
+    expect(html).toContain('content="The 2026 Australian Open');
+    expect(html).toContain("<h1>2026 Grand Slam dates.");
+  });
+
+  it("moves the metadata year with the season", () => {
+    const html = renderHomePage(
+      "https://calendar.example.com",
+      TWO_SEASONS,
+      undefined,
+      new Date("2026-12-01T00:00:00Z"),
+    );
+
+    expect(html).toContain("<title>2027 Grand Slam dates —");
+    expect(html).toContain("<h1>2027 Grand Slam dates.");
   });
 
   it("provides a keyboard-selectable manual feed URL", () => {

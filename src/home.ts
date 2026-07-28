@@ -96,6 +96,7 @@ export function renderHomePage(
   origin: string,
   events: SlamEvent[] = SEED,
   status: HomeStatus = { lastSuccess: null, failCount: 0, servingStale: true },
+  now: Date = new Date(),
 ): string {
   const baseUrl = origin.replace(/\/+$/, "");
   const httpsFeedUrl = `${baseUrl}/slams.ics`;
@@ -104,7 +105,7 @@ export function renderHomePage(
   const safeHttpsFeedUrl = escapeHtml(httpsFeedUrl);
   const safeWebcalFeedUrl = escapeHtml(webcalFeedUrl);
   const safeHomepageUrl = escapeHtml(homepageUrl);
-  const currentSeason = seasonEvents(events);
+  const currentSeason = seasonEvents(events, now);
   const seasonYear = currentSeason[0]?.start.slice(0, 4) ?? "2026";
   const feedStatus = statusCopy(status);
   const structuredData = JSON.stringify({
@@ -120,11 +121,10 @@ export function renderHomePage(
 
   return renderPage({
     head: {
-      title: "Grand Slam Calendar — all four tennis majors, one subscription",
-      description:
-        "Add the Australian Open, Roland-Garros, Wimbledon and US Open to your calendar with one free, automatically updated subscription.",
+      title: `${escapeHtml(seasonYear)} Grand Slam dates — all four tennis majors in one calendar`,
+      description: `The ${escapeHtml(seasonYear)} Australian Open, Roland-Garros, Wimbledon and US Open dates, as one free calendar subscription that keeps itself up to date. No account needed.`,
       canonicalUrl: safeHomepageUrl,
-      ogTitle: "Every Grand Slam. One living calendar.",
+      ogTitle: `${escapeHtml(seasonYear)} Grand Slam dates. One living calendar.`,
       ogDescription:
         "One free subscription for all four tennis majors, kept current as dates change.",
       structuredData,
@@ -145,7 +145,7 @@ export function renderHomePage(
     <div class="hero__grid shell">
       <div class="hero__copy">
         <p class="eyebrow">The majors, without the admin</p>
-        <h1>Every Grand Slam. <em>One calendar.</em></h1>
+        <h1>${escapeHtml(seasonYear)} Grand Slam dates. <em>One calendar.</em></h1>
         <p class="hero__lede">Subscribe once to the Australian Open, Roland-Garros, Wimbledon and the US Open. The dates live in your calendar—and keep up when the season moves.</p>
         <div class="hero__actions">
           <a class="button button--primary" href="${safeWebcalFeedUrl}">

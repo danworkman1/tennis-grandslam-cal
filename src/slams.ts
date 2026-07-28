@@ -87,11 +87,24 @@ function isDisplayableEvent(value: unknown): value is SlamEvent {
   );
 }
 
-export function seasonEvents(events: SlamEvent[]): SlamEvent[] {
+/**
+ * The season the homepage should show: the earliest one with an event still to
+ * come, not merely the earliest one on file. Keying off the first year present
+ * would keep a finished season up until the calendar rolled over on 1 January.
+ * A season stays "upcoming" until its last event ends.
+ *
+ * If every event is in the past — a stale feed — the most recent season is still
+ * better than an empty page, and the completeness check below backstops the rest.
+ */
+export function seasonEvents(events: SlamEvent[], now: Date = new Date()): SlamEvent[] {
   const usable = (events as unknown[]).filter(isDisplayableEvent);
   const sorted = [...usable].sort((a, b) => a.start.localeCompare(b.start));
-  const firstYear = sorted[0]?.start.slice(0, 4);
-  const season = sorted.filter((event) => event.start.startsWith(`${firstYear}-`)).slice(0, 4);
+
+  const today = now.toISOString().slice(0, 10);
+  const stillToCome = sorted.filter((event) => event.endExclusive > today);
+  const targetYear = (stillToCome[0] ?? sorted[sorted.length - 1])?.start.slice(0, 4);
+
+  const season = sorted.filter((event) => event.start.startsWith(`${targetYear}-`)).slice(0, 4);
   const hasEverySlam = new Set(season.map((event) => event.key)).size === 4;
   return season.length === 4 && hasEverySlam ? season : SEED;
 }
