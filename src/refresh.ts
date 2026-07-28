@@ -18,10 +18,26 @@ function indexById(events: SlamEvent[]): Map<string, SlamEvent> {
 
 /**
  * Per-event merge: for each (tournament, year) prefer the fresh Wikipedia
- * candidate, falling back to last-known-good, then the bundled seed. A bad
- * candidate is never allowed to overwrite a good prior value. This is what makes
- * a not-yet-published article (e.g. next year's US Open) degrade gracefully
+ * candidate, then the bundled seed, then last-known-good. A bad candidate is
+ * never allowed to overwrite a good prior value. This is what makes a
+ * not-yet-published article (e.g. next year's US Open) degrade gracefully
  * instead of failing the whole refresh.
+ *
+ * The seed outranks last-known-good, which is worth being explicit about because
+ * the obvious order is the other way round. Last-known-good is whatever the
+ * parser last read; the seed is hand-verified against each tournament's own
+ * calendar. Once a year-specific article is redirected away — which is what
+ * happens to every slam article eventually — that (key, year) never produces a
+ * candidate again, so a wrong known-good becomes permanent and no amount of
+ * successful refreshing can dislodge it. Exactly that happened to the 2026 US
+ * Open, which sat in KV starting 31 August against a true main-draw start of
+ * Sunday 30 August.
+ *
+ * The cost is narrow and deliberate: for a year the seed covers, a genuine date
+ * change that Wikipedia published and has since stopped serving would revert to
+ * the seed. That is the correct bias — the seed is the value a human checked.
+ * Known-good still wins wherever the seed has nothing to say, which is its real
+ * job: carrying years beyond the seed's range.
  */
 export function mergeEvents(
   candidates: SlamEvent[],
@@ -36,7 +52,7 @@ export function mergeEvents(
   for (const year of years) {
     for (const key of SLAM_KEYS) {
       const id = eventId(key, year);
-      const pick = [cand.get(id), good.get(id), seed.get(id)].find((e) => e && isValidEvent(e));
+      const pick = [cand.get(id), seed.get(id), good.get(id)].find((e) => e && isValidEvent(e));
       if (pick) out.push(pick);
     }
   }
