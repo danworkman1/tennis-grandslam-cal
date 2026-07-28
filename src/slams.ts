@@ -96,7 +96,8 @@ function isDisplayableEvent(value: unknown): value is SlamEvent {
  * If every event is in the past — a stale feed — the most recent season is still
  * better than an empty page, and the completeness check below backstops the rest.
  */
-export function seasonEvents(events: SlamEvent[], now: Date = new Date()): SlamEvent[] {
+/** One complete season out of `events`, or null if there isn't one. */
+function pickSeason(events: SlamEvent[], now: Date): SlamEvent[] | null {
   const usable = (events as unknown[]).filter(isDisplayableEvent);
   const sorted = [...usable].sort((a, b) => a.start.localeCompare(b.start));
 
@@ -106,5 +107,13 @@ export function seasonEvents(events: SlamEvent[], now: Date = new Date()): SlamE
 
   const season = sorted.filter((event) => event.start.startsWith(`${targetYear}-`)).slice(0, 4);
   const hasEverySlam = new Set(season.map((event) => event.key)).size === 4;
-  return season.length === 4 && hasEverySlam ? season : SEED;
+  return season.length === 4 && hasEverySlam ? season : null;
+}
+
+export function seasonEvents(events: SlamEvent[], now: Date = new Date()): SlamEvent[] {
+  // The seed has to go through the same single-season selection as live data. It
+  // covers more than one year now, and returning it whole stacked every bundled
+  // season onto a board captioned "the four majors" — on the cold-start path the
+  // seed exists to serve.
+  return pickSeason(events, now) ?? pickSeason(SEED, now) ?? SEED.slice(0, 4);
 }
