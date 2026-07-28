@@ -168,3 +168,35 @@ describe("sitemap", () => {
     expect(xml).toContain(`<lastmod>${post.published}</lastmod>`);
   });
 });
+
+/**
+ * The mechanical half of the daniel-voice register — the part a reader would not
+ * catch but Daniel would. Em-dashes are his single clearest tell, and they are
+ * exactly what creeps back into instruction copy as an aside.
+ *
+ * This pins the rules that can be checked; tone still needs a human.
+ */
+describe("published prose follows the daniel-voice never-list", () => {
+  const prose = POSTS.map((p) =>
+    [p.title, p.description, p.lede, p.body({ httpsFeedUrl: "u", webcalFeedUrl: "u" })].join("\n"),
+  ).join("\n");
+
+  it("uses no em-dashes", () => {
+    expect(prose).not.toContain("—");
+  });
+
+  it("uses no semicolons", () => {
+    // HTML entities are markup, not punctuation, so they do not count.
+    expect(prose.replace(/&(?:#\d+|\w+);/g, "")).not.toContain(";");
+  });
+
+  it("puts no comma before and/or", () => {
+    expect(prose.match(/,\s+(?:and|or)\b/g)).toBeNull();
+  });
+
+  it("uses none of the banned filler", () => {
+    for (const phrase of ["delve", "leverage", "utilise", "seamless", "unlock", "that said"]) {
+      expect(prose.toLowerCase()).not.toContain(phrase);
+    }
+  });
+});
