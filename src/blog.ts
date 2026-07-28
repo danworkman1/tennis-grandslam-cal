@@ -38,15 +38,15 @@ const SUBSCRIBE_POST: BlogPost = {
   title: "How to add the tennis Grand Slams to your calendar",
   description:
     "Subscribe to the Australian Open, Roland-Garros, Wimbledon and US Open in Apple Calendar, Google Calendar or Outlook. One URL, no account, updates itself.",
-  lede: "One subscription URL, three apps, about a minute. The dates then keep themselves current — including when a tournament moves.",
+  lede: "One subscription URL, three apps, about a minute. The dates then keep themselves current, including when a tournament moves.",
   published: "2026-07-28",
-  body: ({ httpsFeedUrl, webcalFeedUrl }) => `        <p>Most people add tennis dates to their calendar by typing them in once, which works right up until a tournament shifts and nobody tells you. A calendar <em>subscription</em> avoids that: your app stores a URL, checks it on its own schedule, and applies changes when they happen.</p>
+  body: ({ httpsFeedUrl, webcalFeedUrl }) => `        <p>Most people add tennis dates to their calendar by typing them in once. That works right up until a tournament shifts and nobody tells you. A calendar <em>subscription</em> avoids that: your app stores a URL, checks it on its own schedule and applies changes when they happen.</p>
 
-        <p>This page is the worked version of that for the four majors. Everything below uses one address.</p>
+        <p>Here's how to set that up for the four majors. Everything below uses the one address.</p>
 
         <h2>The address you need</h2>
 
-        <p>Copy this. It is the same URL for every app and every device, and it does not change as dates update.</p>
+        <p>Copy this. It's the same URL for every app and every device and it doesn't change as dates update.</p>
 
 ${renderSubscribeCta({
   httpsFeedUrl,
@@ -59,17 +59,17 @@ ${renderSubscribeCta({
 
         <p>On iPhone or iPad, open <strong>Settings</strong> → <strong>Apps</strong> → <strong>Calendar</strong> → <strong>Calendar Accounts</strong> → <strong>Add Account</strong> → <strong>Other</strong>, then choose <strong>Add Subscribed Calendar</strong> and paste the URL.</p>
 
-        <p>On a Mac, open Calendar and choose <strong>File</strong> → <strong>New Calendar Subscription</strong>, then paste the URL. Set <em>Auto-refresh</em> to daily or weekly; anything more frequent is wasted, since the source is only checked once a week.</p>
+        <p>On a Mac, open Calendar and choose <strong>File</strong> → <strong>New Calendar Subscription</strong>, then paste the URL. Set <em>Auto-refresh</em> to daily or weekly. Anything more frequent is wasted, since the source only gets checked once a week.</p>
 
-        <p>If you are reading this on the device you want the calendar on, <a href="${webcalFeedUrl}">this link opens Apple Calendar directly</a> and skips the menus.</p>
+        <p>If you're reading this on the device you want the calendar on, <a href="${webcalFeedUrl}">this link opens Apple Calendar directly</a> and skips the menus.</p>
 
         <h2>Google Calendar</h2>
 
-        <p>Google Calendar can only add a subscription on the web — the mobile apps cannot do it, which is the single most common reason people give up on this.</p>
+        <p>Google Calendar can only add a subscription on the web. The mobile apps can't do it. That's the single most common reason people give up on this.</p>
 
         <p>Go to <a href="https://calendar.google.com" rel="noopener">calendar.google.com</a>, open <strong>Settings</strong>, choose <strong>Add calendar</strong> → <strong>From URL</strong>, paste the address and confirm. It then syncs down to the phone app on its own.</p>
 
-        <p>Google refreshes external calendars on its own schedule, and it is not quick — expect up to 24 hours for a change to show. That is Google's behaviour for every subscribed calendar, not something this feed controls.</p>
+        <p>Google refreshes external calendars on its own schedule and it isn't quick. Expect up to 24 hours for a change to show. That's Google's behaviour for every subscribed calendar, not something this feed controls.</p>
 
         <h2>Outlook</h2>
 
@@ -80,22 +80,22 @@ ${renderSubscribeCta({
         <h2>What you actually get</h2>
 
         <ul>
-          <li>Four all-day events a year — one per major, spanning the full main draw.</li>
+          <li>Four all-day events a year, one per major, spanning the full main draw.</li>
           <li>No match times, no draws, no scores. This is for planning a season, not following a tournament.</li>
           <li>No account, no signup, no access to anything of yours. Your app reads the same public file as everyone else.</li>
         </ul>
 
-        <p>If a tournament's published dates move, the feed picks the change up on its weekly check and your calendar applies it whenever it next refreshes. Nothing to do at your end.</p>
+        <p>If a tournament's published dates move, the feed picks the change up on its weekly check and your calendar applies it whenever it next refreshes. Nothing to do at your end!</p>
 
         <h2>Removing it</h2>
 
-        <p>Delete or unsubscribe from the calendar in whichever app you added it to. It is a separate calendar, so removing it leaves everything else untouched.</p>
+        <p>Delete or unsubscribe from the calendar in whichever app you added it to. It's a separate calendar, so removing it leaves everything else untouched.</p>
 
 ${renderSubscribeCta({
   httpsFeedUrl,
   webcalFeedUrl,
   heading: "Ready when you are",
-  blurb: "Same URL as above — grab it and you are done for the season.",
+  blurb: "Same URL as above. Grab it and you're set for the season.",
 })}`,
 };
 
