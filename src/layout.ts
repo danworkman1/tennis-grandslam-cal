@@ -43,7 +43,23 @@ function renderHead(head: HeadOptions): string {
   <meta property="og:description" content="${head.ogDescription}">
   <meta property="og:url" content="${head.canonicalUrl}">
   <meta name="twitter:card" content="summary">
-  <script type="application/ld+json">${head.structuredData}</script>`;
+  <script type="application/ld+json">${head.structuredData}</script>
+  <!-- Google tag (gtag.js). Gated on the production hostname so localhost and
+       workers.dev previews never send hits. -->
+  <script>
+    (function () {
+      if (!['grandslamcalendar.com', 'www.grandslamcalendar.com'].includes(location.hostname)) return;
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-715P6L1NGX';
+      document.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      gtag('js', new Date());
+      gtag('config', 'G-715P6L1NGX');
+    })();
+  </script>`;
 }
 
 export function renderFooter(feedUrl: string): string {
